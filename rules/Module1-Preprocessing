@@ -1,0 +1,24 @@
+rule fastp_trim_reads:
+    """
+    Trim adapters and low quality reads (FASTP).
+    """
+    input:
+        fastq1=get_raw_fastqs_read1,
+        fastq2=get_raw_fastqs_read2
+    output:
+        first="%s/FASTQ/TRIMMED/{rawsamples}_R1.trimmed.fastq.gz" % (config["project-folder"]),
+        second="%s/FASTQ/TRIMMED/{rawsamples}_R2.trimmed.fastq.gz" % (config["project-folder"])
+    params:
+        trim_front1=config["params"]["fastp"]["trim_front1"],
+        trim_tail1=config["params"]["fastp"]["trim_tail1"],
+        trim_front2=config["params"]["fastp"]["trim_front2"],
+        trim_tail2=config["params"]["fastp"]["trim_tail2"]
+    log:
+        "%s/logs/fastp.{rawsamples}.log" % (config["project-folder"])
+    benchmark:
+        "%s/benchmark/fastp.{rawsamples}.benchmark.tsv" % (config["project-folder"])
+    threads: cluster["fastp_trim_reads"]["cpus-per-task"]
+    singularity: config["singularity"]["fastp"]
+    shell:"""
+        fastp -i {input.fastq1} -I {input.fastq2} -o {output.first} -O {output.second} --trim_front1 {params.trim_front1} --trim_tail1 {params.trim_tail1} --trim_front2 {params.trim_front2} --trim_tail2 {params.trim_tail2} --thread {threads} &> {log}
+	"""

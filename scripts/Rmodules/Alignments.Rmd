@@ -1,0 +1,25 @@
+
+# Alignments
+
+First, we check the alignment rates against different available reference genomes
+
+```{r, echo=FALSE, include= T, results="asis"}
+
+for(genome_index in 1:length(genomes)){
+  
+  cat("##", genomes[genome_index], "\n")
+  
+  align_stat_files <- list.files(file.path(projFolder, "BAM", genomes[genome_index]), pattern="*final.out", full.names = TRUE)
+  
+  alignment_rates <- c()
+  for(index in 1:length(align_stat_files)){
+    alignment_rates[index] <- as.numeric(gsub("%", "", strsplit(readLines(align_stat_files[index])[10], "\t")[[1]][2]))
+    index <- index + 1
+  }
+  
+  par(mfrow=c(1,2))
+  barplot(alignment_rates)
+  barplot(alignment_rates, ylim=c(0,100))
+  cat("\n")
+}
+```

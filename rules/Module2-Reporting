@@ -1,0 +1,34 @@
+rule R_finalReport:
+    """
+    Create the final report (R).
+    """
+    input:
+        script=config["report-script"],
+        alignments=expand("%s/BAM/alignmentsReady.{rawsamples}" % config["project-folder"], rawsamples=rawsamples),
+        alignmentsTrimmed=expand("%s/BAM/alignmentsReady_trimmed.{rawsamples}" % config["project-folder"], rawsamples=rawsamples)
+    output:
+        "%s/finalReport.html" % (config["project-folder"])
+    log:
+        "%s/logs/R/finalReport.log" % (config["project-folder"])
+    benchmark:
+        "%s/benchmark/R_finalReport.tsv" % (config["project-folder"])
+    singularity:
+        config["singularity"]["r-gbs"]
+    params:
+       projFolder=config["project-folder"],
+       pipeFolder=config["pipeline-folder"],
+       pipeConfig=config["pipeline-config"],
+       serverConfig=config["server-config"],
+       genomeFolder=config["genomes-folder"],
+       genomeFiles=config["genomes-files"]
+    shell:"""
+       R -e "projFolder <- '{params.projFolder}'; \
+             pipelineFolder <- '{params.pipeFolder}'; \
+             pipelineConfig.file <- '{params.pipeConfig}'; \
+             serverConfig.file <- '{params.serverConfig}'; \
+             genomeFolder <- '{params.genomeFolder}'; \
+             genomeFiles <- '{params.genomeFiles}'; \
+             snakemake <- TRUE;\
+             options(knitr.duplicate.label = 'allow');\
+             source('{input.script}')" &> {log}
+    """

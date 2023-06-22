@@ -1,0 +1,41 @@
+# Basic stats
+
+A concise overview of important runtime parameters and used inputs.
+
+```{r get pipeline version}
+pipeSMK <- readLines(file.path(pipelineFolder,"Snakebite-LabQC.smk"))
+pipeVersion <- gsub("##### Version: ","",pipeSMK[grep("##### Version:", pipeSMK)])
+```
+
+```{r import barcodesID, results="asis"}
+pipelineConfig <- readLines(pipelineConfig.file)
+
+sampleSheet.file <- getConfigField("samplesheet-file")
+if(substr(sampleSheet.file,1,1)!="/") sampleSheet.file <- file.path(projFolder, sampleSheet.file)
+sampleSheet <- read.table(sampleSheet.file, sep="\t", header=TRUE)
+
+projectFolder.info <- getConfigField("project-folder")
+pipelineFolder.info <- getConfigField("pipeline-folder")
+pipelineConfig.info <- pipelineConfig.file
+serverConfig.info <- serverConfig.file
+
+genomes <- strsplit(genomeFiles, " ")[[1]]
+
+out <- data.frame(c("Number of raw-samples",
+                    "Pipeline version",
+                    "Project folder",
+                    "Pipeline folder",
+                    "Pipeline config",
+                    "Server config",
+                    "Genomes"),
+                  c(length(unique(sampleSheet$rawsample)),
+                    pipeVersion,
+                    projectFolder.info,
+                    pipelineFolder.info,
+                    pipelineConfig.info,
+                    serverConfig.info,
+                    paste(genomes, collapse="\n")))
+
+out_html <- knitr::kable(out, col.names = NULL, "html")
+kable_styling(out_html, "striped", position = "left")
+```

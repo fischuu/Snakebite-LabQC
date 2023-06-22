@@ -1,0 +1,24 @@
+project-folder: "/scratch/project_2001746/WF_QC"                   
+pipeline-folder: "/users/fischerd/git/Snakebite-LabQC"
+pipeline-config: "Snakebite-LabQC_config.yaml"
+server-config: "Snakebite-LabQC_server-config.yaml"
+rawdata-folder: "FASTQ/RAW"
+samplesheet-file: "samplesheet.tsv"
+sampleinfo-file: ""
+local-scratch: $LOCAL_SCRATCH
+tmp-folder: "tmp"
+genomes-folder: "References"
+genomes-files: ["GCF_000005845.2_ASM584v2_genomic.fna", "GCF_000013425.1_ASM1342v1_genomic.fna", "SILVA_138.1_LSURef_tax_silva.fasta"]
+
+params:
+  fastp:
+    trim_front1: 0
+    trim_tail1: 0
+    trim_front2: 0
+    trim_tail2: 0
+  star:
+    genomeSAindexNbases: 14
+    overhang: 149
+    limitGenomeGenerateRAM: 300647710720
+    sparseD: 1                  # For large genomes, set this value higher
+    genomeChrBinNbits: 18       # Reduce this for larger genomes

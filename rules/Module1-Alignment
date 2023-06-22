@@ -1,0 +1,148 @@
+rule build_genome_indices:
+    """
+    Create genome indices for alignments (STAR).
+    """
+    output:
+        "%s/indexCreationReady" % (config["genomes-folder"])
+    log:
+        "%s/logs/STAR/build_genome_indices.log" % (config["project-folder"])
+    benchmark:
+        "%s/benchmark/STAR/build_genome_indices.benchmark.tsv" % (config["project-folder"])
+    threads: cluster["build_genome_indices"]["cpus-per-task"]
+    params:
+       genomes_folder=config["genomes-folder"],
+       genomes_fasta=config["genomes-files"],
+       overhang=config["params"]["star"]["overhang"],
+       limitGenomeGenerateRAM=config["params"]["star"]["limitGenomeGenerateRAM"]
+    singularity: config["singularity"]["star"]
+    shell:"""
+        refs=({params.genomes_fasta})
+          
+        for i in "${{refs[@]}}"
+        do
+        : 
+            mkdir -p {params.genomes_folder}/Index-"$i"
+            STAR --runThreadN {threads} --runMode genomeGenerate --limitGenomeGenerateRAM={params.limitGenomeGenerateRAM} --genomeDir {params.genomes_folder}/Index-"$i" --genomeFastaFiles {params.genomes_folder}/"$i"
+        done
+        touch {output};
+    """
+       
+       
+rule star_align_raw_reads:
+    """
+    Map the rawsamples to the provided reference genome (STAR).
+    """
+    input:
+        indices="%s/indexCreationReady" % (config["genomes-folder"]),
+        fastq=get_raw_fastqs
+    output:
+        ready="%s/BAM/alignmentsReady.{rawsamples}" % (config["project-folder"])
+    log:
+        "%s/logs/STAR/star_align_raw_reads.{rawsamples}.log" % (config["project-folder"])
+    benchmark:
+        "%s/benchmark/STAR/star_align_raw_reads.{rawsamples}.benchmark.tsv" % (config["project-folder"])
+    threads: cluster["star_align_raw_reads"]["cpus-per-task"]
+    params:
+        project_folder=config["project-folder"],
+        genomes_folder=config["genomes-folder"],
+        genomes_fasta=config["genomes-files"]
+    singularity: config["singularity"]["star"]
+    shell:"""
+    
+        refs=({params.genomes_fasta});
+        tmpFastq=({input.fastq});
+
+        for i in "${{refs[@]}}"
+        do
+        :
+          DIRout={params.project_folder}/BAM/"$i";
+          FILEout={params.project_folder}/BAM/"$i"/{wildcards.rawsamples}.bam;
+          currentIndex={params.genomes_folder}/Index-"$i";
+            
+          mkdir -p $DIRout
+
+          STAR --genomeDir "$currentIndex" \
+               --readFilesIn {input.fastq} \
+               --readFilesCommand zcat \
+               --outSAMtype BAM SortedByCoordinate \
+               --outSAMunmapped Within \
+               --runThreadN {threads} \
+               --outReadsUnmapped Fastx \
+               --outFileNamePrefix {wildcards.rawsamples}_"$i"_ 2> {log};
+      
+          mv {wildcards.rawsamples}_"$i"_Aligned.sortedByCoord.out.bam "$FILEout"
+          mv {wildcards.rawsamples}_"$i"_Log.final.out {wildcards.rawsamples}_"$i"_Log.progress.out {wildcards.rawsamples}_"$i"_Log.out {wildcards.rawsamples}_"$i"_SJ.out.tab "$DIRout"
+         
+          mv {wildcards.rawsamples}_"$i"_Unmapped.out.mate1 {wildcards.rawsamples}_"$i"_R1.fastq
+          mv {wildcards.rawsamples}_"$i"_Unmapped.out.mate2 {wildcards.rawsamples}_"$i"_R2.fastq
+                
+          wc -l {wildcards.rawsamples}_"$i"_R1.fastq > {wildcards.rawsamples}_"$i"_R1.fastq.wcl
+          wc -l {wildcards.rawsamples}_"$i"_R2.fastq > {wildcards.rawsamples}_"$i"_R2.fastq.wcl
+                
+          gzip {wildcards.rawsamples}_"$i"_R1.fastq
+          gzip {wildcards.rawsamples}_"$i"_R2.fastq
+                
+      done
+      
+      touch {output}    
+    """
+
+rule star_align_trimmed_reads:
+    """
+    Map the trimmed samples to the provided reference genome (STAR).
+    """
+    input:
+        indices="%s/indexCreationReady" % (config["genomes-folder"]),
+        fastq=["%s/FASTQ/TRIMMED/{rawsamples}_R1.trimmed.fastq.gz" % (config["project-folder"]),
+               "%s/FASTQ/TRIMMED/{rawsamples}_R2.trimmed.fastq.gz" % (config["project-folder"])]
+    output:
+        ready="%s/BAM/alignmentsReady_trimmed.{rawsamples}" % (config["project-folder"])
+    log:
+        "%s/logs/STAR/star_align_trimmed_reads.{rawsamples}.log" % (config["project-folder"])
+    benchmark:
+        "%s/benchmark/STAR/star_align_trimmed_reads.{rawsamples}.benchmark.tsv" % (config["project-folder"])
+    threads: cluster["star_align_trimmed_reads"]["cpus-per-task"]
+    params:
+        project_folder=config["project-folder"],
+        genomes_folder=config["genomes-folder"],
+        genomes_fasta=config["genomes-files"]
+    singularity: config["singularity"]["star"]
+    shell:"""
+    
+        refs=({params.genomes_fasta});
+        tmpFastq=({input.fastq});
+
+        for i in "${{refs[@]}}"
+        do
+        :
+          DIRout={params.project_folder}/BAM/"$i";
+          FILEout={params.project_folder}/BAM/"$i"/{wildcards.rawsamples}.bam;
+          currentIndex={params.genomes_folder}/Index-"$i";
+            
+          mkdir -p $DIRout
+
+          STAR --genomeDir "$currentIndex" \
+               --readFilesIn {input.fastq} \
+               --readFilesCommand zcat \
+               --outSAMtype BAM SortedByCoordinate \
+               --outSAMunmapped Within \
+               --runThreadN {threads} \
+               --outReadsUnmapped Fastx \
+               --outFileNamePrefix {wildcards.rawsamples}_"$i"_ 2> {log};
+      
+          mv {wildcards.rawsamples}_"$i"_Aligned.sortedByCoord.out.bam "$FILEout"
+          mv {wildcards.rawsamples}_"$i"_Log.final.out {wildcards.rawsamples}_"$i"_Log.progress.out {wildcards.rawsamples}_"$i"_Log.out {wildcards.rawsamples}_"$i"_SJ.out.tab "$DIRout"
+         
+          mv {wildcards.rawsamples}_"$i"_Unmapped.out.mate1 {wildcards.rawsamples}_"$i"_R1.fastq
+          mv {wildcards.rawsamples}_"$i"_Unmapped.out.mate2 {wildcards.rawsamples}_"$i"_R2.fastq
+                
+          wc -l {wildcards.rawsamples}_"$i"_R1.fastq > {wildcards.rawsamples}_"$i"_R1.fastq.wcl
+          wc -l {wildcards.rawsamples}_"$i"_R2.fastq > {wildcards.rawsamples}_"$i"_R2.fastq.wcl
+                
+          gzip {wildcards.rawsamples}_"$i"_R1.fastq
+          gzip {wildcards.rawsamples}_"$i"_R2.fastq
+                
+      done
+      
+      touch {output}    
+    """
