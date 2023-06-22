@@ -12,7 +12,6 @@ rule build_genome_indices:
     params:
        genomes_folder=config["genomes-folder"],
        genomes_fasta=config["genomes-files"],
-       overhang=config["params"]["star"]["overhang"],
        limitGenomeGenerateRAM=config["params"]["star"]["limitGenomeGenerateRAM"]
     singularity: config["singularity"]["star"]
     shell:"""
@@ -21,8 +20,16 @@ rule build_genome_indices:
         for i in "${{refs[@]}}"
         do
         : 
-            mkdir -p {params.genomes_folder}/Index-"$i"
-            STAR --runThreadN {threads} --runMode genomeGenerate --limitGenomeGenerateRAM={params.limitGenomeGenerateRAM} --genomeDir {params.genomes_folder}/Index-"$i" --genomeFastaFiles {params.genomes_folder}/"$i"
+            if [ -d \"{params.genomes_folder}/Index-'$i'\" ] 
+            then
+                echo "Index exists." 
+            else
+                mkdir -p {params.genomes_folder}/Index-"$i"
+                STAR --runThreadN {threads} --runMode genomeGenerate \
+                     --limitGenomeGenerateRAM={params.limitGenomeGenerateRAM} \
+                     --genomeDir {params.genomes_folder}/Index-"$i" \
+                     --genomeFastaFiles {params.genomes_folder}/"$i"
+            fi
         done
         touch {output};
     """

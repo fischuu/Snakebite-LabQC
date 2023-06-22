@@ -6,4 +6,5 @@
 
 0.1.* UPDATES
 --------------------------------------------------------------------------------
+2: Indices are now only created, if Index-folder does not exist
 1: First, inital version
